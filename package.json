@@ -1,0 +1,36 @@
+{
+  "name": "volunteer_database",
+  "version": "1.0.0",
+  "description": "",
+  "homepage": "https://github.com/Gaithersburg-HELP/volunteer_database#readme",
+  "bugs": {
+    "url": "https://github.com/Gaithersburg-HELP/volunteer_database/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Gaithersburg-HELP/volunteer_database.git"
+  },
+  "license": "MIT",
+  "author": "",
+  "type": "commonjs",
+  "main": "sheet_utilities.js",
+  "scripts": {
+    "test": "qunit "
+  },
+  "engines": {
+    "node": ">=16.9.0"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.2.0",
+    "@eslint/js": "^9.19.0",
+    "eslint": "^9.19.0",
+    "eslint-config-prettier": "^10.0.1",
+    "eslint-plugin-import": "^2.31.0",
+    "eslint-plugin-prettier": "^5.2.3",
+    "globals": "^15.14.0",
+    "prettier": "3.4.2"
+  },
+  "dependencies": {
+    "eslint-plugin-es5": "^1.5.0"
+  }
+}
