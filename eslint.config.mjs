@@ -1,7 +1,6 @@
 import { FlatCompat } from "@eslint/eslintrc";
 import globals from "globals";
 import pluginJs from "@eslint/js";
-import es5 from "eslint-plugin-es5";
 import eslintConfigPrettier from "eslint-config-prettier";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -16,14 +15,13 @@ const compat = new FlatCompat({
 
 /** @type {import('eslint').Linter.Config[]} */
 export default [
-  ...compat.extends("plugin:es5/no-es2015"),
   eslintConfigPrettier,
   pluginJs.configs.recommended,
   { files: ["src/*.js"] },
   {
     languageOptions: {
       globals: { ...globals.browser },
-      ecmaVersion: 5,
+      ecmaVersion: 2020,
       sourceType: "script"
     }
   },

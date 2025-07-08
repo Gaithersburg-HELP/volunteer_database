@@ -1,5 +1,6 @@
 // Using Google Rhino with v8 runtime disabled due to this bug with multi-login when exporting contacts and deleting the sheet automatically: https://stackoverflow.com/questions/60230776/were-sorry-a-server-error-occurred-while-reading-from-storage-error-code-perm
-// Google Rhino supports ES5 only, so ES6 features like let and for..of are not available
+// Migrated from Google Rhino to V8. Rhino supports ES5 only, so ES6 features like let and for..of were not available
+// and were not implemented.
 
 // 1-based index of data columns after group/application columns
 var DATA_COLUMNS = Object.freeze({
@@ -384,15 +385,7 @@ function getSelectedRows() {
 }
 
 function emptyGroupColArray() {
-  // Array.fill not supported in Rhino
-  var rowToAppend = Array(VOL_DATA_START_COLUMN - 1);
-  var i = 0;
-  while (i < rowToAppend.length) {
-    rowToAppend[i] = "";
-    i = i + 1;
-  }
-
-  return rowToAppend;
+  return new Array(VOL_DATA_START_COLUMN - 1).fill("");
 }
 
 function MoveBetweenVolSheets(sourceSheet, destSheet) {
@@ -493,12 +486,29 @@ function DeleteSelected() {
   });
 }
 
-function deleteExportSheet(sheetName) {
-  // save selection, selection gets deleted after deleteSheet
-  var ranges = SpreadsheetApp.getActiveRangeList();
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
-  SpreadsheetApp.getActiveSpreadsheet().deleteSheet(sheet);
-  SpreadsheetApp.getActiveSheet().setActiveRangeList(ranges);
+function DeleteExportSheets() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheets = ss.getSheets();
+  const prefix = "Export ";
+
+  // save current selection
+  const activeSheet = ss.getActiveSheet();
+  const ranges = SpreadsheetApp.getActiveRangeList();
+
+  // delete all sheets that start with the prefix
+  sheets.forEach((sheet) => {
+    if (sheet.getName().startsWith(prefix)) {
+      ss.deleteSheet(sheet);
+    }
+  });
+
+  // restore selection if the active sheet wasn't deleted
+  if (!activeSheet.isDelete) {
+    activeSheet.activate();
+    if (ranges) {
+      activeSheet.setActiveRangeList(ranges);
+    }
+  }
 }
 
 function showExportDialog(exportSheetName) {
@@ -508,88 +518,25 @@ function showExportDialog(exportSheetName) {
   var params = ssID + "/export?gid=" + sheetId + "&format=csv";
   var url = "https://docs.google.com/spreadsheets/d/" + params;
 
+  const clientFunction = `
+    function handleExport() {
+      window.close();
+      return true;
+    }
+  `;
+
   // from https://stackoverflow.com/questions/10744760/google-apps-script-to-open-a-url
   var html = HtmlService.createHtmlOutput(
     "<html>" +
-      // Offer URL as clickable link in case code fails.
-      "<head><style>" +
-      "#container {" +
-      "position: relative;" +
-      "width: 50%;" +
-      "margin-left: auto;" +
-      "margin-right: auto;" +
-      "}" +
-      "#loading, #close {" +
-      "width: 100%;" +
-      "}" +
-      "#close {" +
-      "position: absolute;" +
-      "top: 0;" +
-      "min-width: 64px;" +
-      "border: none;" +
-      "outline: none;" +
-      "background: rgba(0,0,0,0);" +
-      "-webkit-font-smoothing: antialiased;" +
-      "transition: box-shadow 280ms cubic-bezier(0.4, 0, 0.2, 1);" +
-      "padding: 0 16px 0 16px;" +
-      "will-change: transform,opacity;" +
-      "height: 36px;" +
-      "border-radius: 4px;" +
-      "border-style: none;" +
-      "-webkit-tap-highlight-color: rgba(232, 230, 227, 0);" +
-      "box-shadow: 0px 3px 1px -2px rgba(0, 0, 0, 0.2), 0px 2px 2px 0px rgba(0, 0, 0, 0.14), 0px 1px 5px 0px rgba(0, 0, 0, 0.12);" +
-      "background-color: #4e00be;" +
-      "color: #e8e6e3;" +
-      "}" +
-      // From https://codepen.io/mandelid/pen/kNBYLJ
-      "#loading {" +
-      "position: relative;" +
-      "margin-left: auto;" +
-      "margin-right: auto;" +
-      "visibility: hidden;" +
-      "width: 50px;" +
-      "height: 50px;" +
-      "border: 3px solid #4e00be;" +
-      "border-radius: 50%;" +
-      "border-top-color: #fff;" +
-      "animation: spin 1s ease-in-out infinite;" +
-      "-webkit-animation: spin 1s ease-in-out infinite;" +
-      "}" +
-      "@keyframes spin {" +
-      "to { -webkit-transform: rotate(360deg); }" +
-      "}" +
-      "@-webkit-keyframes spin {" +
-      "to { -webkit-transform: rotate(360deg); }" +
-      "}" +
-      "</style></head>" +
       '<body style="word-break:break-word;font-family:sans-serif;"><p><a href="' +
       url +
-      '" target="_blank" id="link" onclick="window.close()" download>Right click this link</a> and click Save Link As to save the CSV.</p>' +
-      '<div id="container">' +
-      '<div id="loading"></div>' +
-      '<button id="close" onClick="closeDelete()">Close and delete sheet</button>' +
-      "</div>" +
-      '<p id="error"></p>' +
+      '" target="_blank" id="link" onclick="handleExport()" download>Right click this link</a> and click Save Link As to save the CSV.</p>' +
       "</body><script>" +
-      "function closeDelete() {" +
-      'var exportSheetName = "' +
-      exportSheetName +
-      '";' +
-      'document.getElementById("close").style.visibility = "hidden";' +
-      'document.getElementById("loading").style.visibility = "visible";' +
-      "google.script.run" +
-      ".withSuccessHandler(() => {" +
-      "google.script.host.close()" +
-      "})" +
-      ".withFailureHandler(() => {" +
-      'document.getElementById("loading").style.visibility = "hidden";' +
-      'document.getElementById("error").append("Failed to delete sheet, close this dialog in the top right and delete sheet manually.");' +
-      "})" +
-      ".deleteExportSheet(exportSheetName);" +
-      "}" +
+      clientFunction +
       "</script>" +
       "</html>"
   )
+
     .setWidth(450)
     .setHeight(170);
 
@@ -633,8 +580,8 @@ function ExportGroup() {
 
   var groupEmail = result.getResponseText().trim();
 
-  var exportSheet = SpreadsheetApp.getActiveSpreadsheet().insertSheet();
-  var exportSheetName = exportSheet.getSheetName();
+  const exportSheetName = `Export Group - ` + formatDateTime();
+  var exportSheet = SpreadsheetApp.getActiveSpreadsheet().insertSheet(exportSheetName);
 
   var rowsToAppend = [];
 
@@ -695,12 +642,23 @@ function orderedHash() {
   };
 }
 
+function formatDateTime() {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  const year = String(now.getFullYear()).slice(-2);
+  const hours = String(now.getHours()).padStart(2, "0");
+  const minutes = String(now.getMinutes()).padStart(2, "0");
+
+  return `${month}/${day}/${year} - ${hours}:${minutes}`;
+}
+
 function ExportContact() {
   var activeSheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   var rowsToExport = getSelectedRows();
 
-  var exportSheet = SpreadsheetApp.getActiveSpreadsheet().insertSheet();
-  var exportSheetName = exportSheet.getSheetName();
+  const exportSheetName = `Export Contacts - ` + formatDateTime();
+  var exportSheet = SpreadsheetApp.getActiveSpreadsheet().insertSheet(exportSheetName);
 
   var startColumn = VOL_DATA_START_COLUMN;
   if (activeSheet.getName() === "Pending") {

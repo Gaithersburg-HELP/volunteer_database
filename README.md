@@ -1,7 +1,7 @@
 # Volunteer Database
 
 Apps Script for volunteer database buttons.
-Uses Google Rhino, so ES6 features are not supported.
+Uses Google Apps Script V8 runtime.
 
 To set up a local development environment, do the following:
 

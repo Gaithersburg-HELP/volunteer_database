@@ -29,8 +29,5 @@
     "eslint-plugin-prettier": "^5.2.3",
     "globals": "^15.14.0",
     "prettier": "3.4.2"
-  },
-  "dependencies": {
-    "eslint-plugin-es5": "^1.5.0"
   }
 }
